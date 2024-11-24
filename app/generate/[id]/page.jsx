@@ -8,6 +8,24 @@ import { Label } from "@/components/ui/label"
 import { jsPDF } from 'jspdf'
 import html2canvas from 'html2canvas'
 import React from 'react'
+import { Faker, en_IN } from '@faker-js/faker'
+
+// Configure faker to use Indian locale
+const fakers = new Faker({
+  locale: [en_IN],
+})
+
+function generateMaharashtraNumberPlate() {
+  const rtoCodes = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20'];
+  const randomLetter = () => String.fromCharCode(65 + Math.floor(Math.random() * 26));
+  const randomNumber = (digits) => Math.floor(Math.random() * (10 ** digits)).toString().padStart(digits, '0');
+  
+  const rto = rtoCodes[Math.floor(Math.random() * rtoCodes.length)];
+  const letters = randomLetter() + randomLetter();
+  const numbers = randomNumber(4);
+  
+  return `MH${rto}${letters}${numbers}`;
+}
 
 export default function GenerateBill({ params }) {
   const BOOKING_FEE = 7.75;
@@ -15,14 +33,70 @@ export default function GenerateBill({ params }) {
   const [template, setTemplate] = useState('')
   const [formData, setFormData] = useState({
     customerName: 'Chaitanya',
+    riderName: '',
     amount: '',
     date: '',
+    longDate: '',
+    shortDate: '',
+    startTime: '',
+    endTime: '',
+    duration: '',
+    paymentTime: '',
+    formattedStartTime: '',
+    formattedEndTime: '',
+    formattedPaymentTime: '',
     invoiceNumber: '',
     bookingFee: BOOKING_FEE.toFixed(2),
-    totalAmount: ''
+    totalAmount: '',
+    numberPlate: ''
   })
   const printPreviewRef = useRef(null)
   const previewRef = useRef(null)
+
+  const generateRandomRiderName = () => {
+    const indianSurnames = [
+      'Patel', 'Kumar', 'Singh', 'Sharma', 'Verma', 
+      'Gupta', 'Reddy', 'Yadav', 'Raj', 'Malhotra',
+      'Kapoor', 'Shah', 'Mehta', 'Iyer', 'Nair'
+    ]
+    
+    const firstName = fakers.person.firstName('male')
+    const lastName = indianSurnames[Math.floor(Math.random() * indianSurnames.length)]
+    const fullName = `${firstName} ${lastName}`
+    
+    setFormData(prev => ({
+      ...prev,
+      riderName: fullName
+    }))
+  }
+
+  const generateRandomNumberPlate = () => {
+    const numberPlate = generateMaharashtraNumberPlate();
+    setFormData(prev => ({
+      ...prev,
+      numberPlate
+    }));
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return { longDate: '', shortDate: '' }
+
+    const date = new Date(dateString)
+    
+    const longDate = date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    })
+
+    const shortDate = date.toLocaleDateString('en-US', {
+      year: '2-digit',
+      month: '2-digit',
+      day: '2-digit'
+    })
+
+    return { longDate, shortDate }
+  }
 
   useEffect(() => {
     const fetchTemplate = async () => {
@@ -50,6 +124,28 @@ export default function GenerateBill({ params }) {
         amount: value,
         bookingFee: BOOKING_FEE.toFixed(2),
         totalAmount: totalAmount
+      }))
+    } else if (name === 'date') {
+      const { longDate, shortDate } = formatDate(value)
+      setFormData(prev => ({
+        ...prev,
+        date: value,
+        longDate,
+        shortDate
+      }))
+    } else if (name === 'startTime' || name === 'endTime') {
+      const newTimes = name === 'startTime' 
+        ? { startTime: value, endTime: formData.endTime }
+        : { startTime: formData.startTime, endTime: value }
+
+      const { duration, paymentTime, formattedTimes } = calculateTimes(newTimes.startTime, newTimes.endTime)
+
+      setFormData(prev => ({
+        ...prev,
+        [name]: value,
+        duration,
+        paymentTime,
+        ...formattedTimes
       }))
     } else {
       setFormData(prev => ({ ...prev, [name]: value }))
@@ -134,6 +230,57 @@ export default function GenerateBill({ params }) {
     printWindow.print()
   }
 
+  const calculateTimes = (startTime, endTime) => {
+    if (!startTime || !endTime) return { duration: '', paymentTime: '', formattedTimes: {} }
+  
+    let startDate = new Date(`2000-01-01T${startTime}`)
+    let endDate = new Date(`2000-01-01T${endTime}`)
+  
+    if (endDate < startDate) {
+      endDate = new Date(`2000-01-02T${endTime}`)
+    }
+  
+    const diff = endDate - startDate
+  
+    const hours = Math.floor(diff / (1000 * 60 * 60))
+    const minutes = Math.round((diff % (1000 * 60 * 60)) / (1000 * 60))
+    const duration = `${hours}h ${minutes}m`
+  
+    const paymentDate = new Date(endDate.getTime() + 2 * 60000)
+    
+    let paymentHours = paymentDate.getHours()
+    let paymentMinutes = paymentDate.getMinutes()
+    const paymentTime = `${paymentHours.toString().padStart(2, '0')}:${paymentMinutes.toString().padStart(2, '0')}`
+  
+    const formattedStartTime = startDate.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    })
+    
+    const formattedEndTime = new Date(`2000-01-01T${endTime}`).toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    })
+    
+    const formattedPaymentTime = paymentDate.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    })
+  
+    return {
+      duration,
+      paymentTime,
+      formattedTimes: {
+        formattedStartTime,
+        formattedEndTime,
+        formattedPaymentTime
+      }
+    }
+  }
+
   return (
     <div className="container mx-auto p-4 flex">
       <div className="w-1/2 pr-4">
@@ -189,6 +336,24 @@ export default function GenerateBill({ params }) {
             />
           </div>
           <div>
+            <Label htmlFor="longDate">Formatted Date (Long)</Label>
+            <Input
+              id="longDate"
+              name="longDate"
+              value={formData.longDate}
+              disabled
+            />
+          </div>
+          <div>
+            <Label htmlFor="shortDate">Formatted Date (Short)</Label>
+            <Input
+              id="shortDate"
+              name="shortDate"
+              value={formData.shortDate}
+              disabled
+            />
+          </div>
+          <div>
             <Label htmlFor="invoiceNumber">Invoice Number</Label>
             <Input
               id="invoiceNumber"
@@ -198,13 +363,90 @@ export default function GenerateBill({ params }) {
               onChange={handleInputChange}
             />
           </div>
+          <div>
+            <Label htmlFor="startTime">Start Time</Label>
+            <Input
+              id="startTime"
+              name="startTime"
+              type="time"
+              value={formData.startTime}
+              onChange={handleInputChange}
+            />
+          </div>
+          <div>
+            <Label htmlFor="endTime">End Time</Label>
+            <Input
+              id="endTime"
+              name="endTime"
+              type="time"
+              value={formData.endTime}
+              onChange={handleInputChange}
+            />
+          </div>
+          <div>
+            <Label htmlFor="duration">Duration</Label>
+            <Input
+              id="duration"
+              name="duration"
+              value={formData.duration}
+              disabled
+            />
+          </div>
+          <div>
+            <Label htmlFor="paymentTime">Payment Time (End Time + 2mins)</Label>
+            <Input
+              id="paymentTime"
+              name="paymentTime"
+              value={formData.formattedPaymentTime}
+              disabled
+            />
+          </div>
+          <div>
+            <Label htmlFor="riderName">Rider Name</Label>
+            <div className="flex space-x-2">
+              <Input
+                id="riderName"
+                name="riderName"
+                value={formData.riderName}
+                onChange={handleInputChange}
+                placeholder="Enter rider name"
+              />
+              <Button 
+                type="button" 
+                onClick={generateRandomRiderName}
+                className="whitespace-nowrap"
+              >
+                Generate Name
+              </Button>
+            </div>
+          </div>
+          <div>
+            <Label htmlFor="numberPlate">Number Plate</Label>
+            <div className="flex space-x-2">
+              <Input
+                id="numberPlate"
+                name="numberPlate"
+                value={formData.numberPlate}
+                onChange={handleInputChange}
+                placeholder="Enter number plate"
+              />
+              <Button 
+                type="button" 
+                onClick={generateRandomNumberPlate}
+                className="whitespace-nowrap"
+              >
+                Generate Plate
+              </Button>
+            </div>
+          </div>
           <div className="flex space-x-2">
             <Button type="button" onClick={generatePDF}>Generate PDF</Button>
             <Button type="button" onClick={handlePrintPreview}>Print Preview</Button>
           </div>
         </form>
       </div>
-      <div className="w-1/2 pl-4 border-l">
+      <div className="w-1/2
+pl-4 border-l">
         <h2 className="text-2xl font-bold mb-4">Preview</h2>
         <div 
           ref={previewRef}
@@ -221,3 +463,4 @@ export default function GenerateBill({ params }) {
     </div>
   )
 }
+
