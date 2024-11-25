@@ -662,8 +662,7 @@ export default function GenerateBill({ params }) {
       <h2 className="text-2xl font-bold mb-4">Preview</h2>
       <div 
         ref={previewRef}
-        className="bg-white p-4 border rounded-md overflow-auto" 
-        style={{ width: '210mm', height: '297mm', maxHeight: '600px' }}
+        className="bg-white p-4 border rounded-md  " 
       >
         <div 
           dangerouslySetInnerHTML={{ 
