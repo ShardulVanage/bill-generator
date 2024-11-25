@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import Link from 'next/link'
+import { ArrowBigLeftDash } from 'lucide-react'
 
 export default function CreateTemplate() {
   const router = useRouter()
@@ -41,6 +43,9 @@ export default function CreateTemplate() {
 
   return (
     <div className="container mx-auto p-4">
+      <Link  href={'/'}>
+      <ArrowBigLeftDash/>
+      </Link>
       <h1 className="text-3xl font-bold mb-6">Create Template</h1>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>

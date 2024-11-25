@@ -9,6 +9,14 @@ import { jsPDF } from 'jspdf'
 import html2canvas from 'html2canvas'
 import React from 'react'
 import { Faker, en_IN } from '@faker-js/faker'
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger 
+} from "@/components/ui/dropdown-menu"
+import { MapPin, List ,X ,ArrowBigLeftDash} from 'lucide-react'
+import Link from 'next/link'
 
 // Configure faker to use Indian locale
 const fakers = new Faker({
@@ -31,8 +39,16 @@ export default function GenerateBill({ params }) {
   const BOOKING_FEE = 7.75;
   const router = useRouter()
   const [template, setTemplate] = useState('')
+  const [addresses, setAddresses] = useState({
+    pickup: [],
+    dropTo: []
+  })
+  const [currentAddress, setCurrentAddress] = useState({
+    pickup: '',
+    dropTo: ''
+  })
   const [formData, setFormData] = useState({
-    customerName: 'Chaitanya',
+    customerName: '',
     riderName: '',
     amount: '',
     date: '',
@@ -48,10 +64,60 @@ export default function GenerateBill({ params }) {
     invoiceNumber: '',
     bookingFee: BOOKING_FEE.toFixed(2),
     totalAmount: '',
-    numberPlate: ''
+    numberPlate: '',
+    pickupAddress: '',
+    dropToAddress: ''
   })
   const printPreviewRef = useRef(null)
   const previewRef = useRef(null)
+
+  const saveAddress = (type) => {
+    const addressToSave = currentAddress[type].trim()
+    if (addressToSave) {
+      const updatedAddresses = {
+        ...addresses,
+        [type]: [...addresses[type], addressToSave]
+      }
+      setAddresses(updatedAddresses)
+      
+      // Update form data with the saved address
+      setFormData(prev => ({
+        ...prev,
+        [`${type}Address`]: addressToSave
+      }))
+      
+      // Clear input
+      setCurrentAddress(prev => ({
+        ...prev,
+        [type]: ''
+      }))
+
+      // Optional: Save to localStorage for persistence
+      localStorage.setItem(`${type}Addresses`, JSON.stringify(updatedAddresses[type]))
+    }
+  }
+
+  const selectSavedAddress = (type, address) => {
+    setFormData(prev => ({
+      ...prev,
+      [`${type}Address`]: address
+    }))
+    setCurrentAddress(prev => ({
+      ...prev,
+      [type]: address
+    }))
+  }
+
+  // Load saved addresses from localStorage on component mount
+  useEffect(() => {
+    const savedPickupAddresses = JSON.parse(localStorage.getItem('pickupAddresses') || '[]')
+    const savedDropToAddresses = JSON.parse(localStorage.getItem('dropToAddresses') || '[]')
+    
+    setAddresses({
+      pickup: savedPickupAddresses,
+      dropTo: savedDropToAddresses
+    })
+  }, [])
 
   const generateRandomRiderName = () => {
     const indianSurnames = [
@@ -283,18 +349,23 @@ export default function GenerateBill({ params }) {
 
   return (
     <div className="container mx-auto p-4 flex">
-      <div className="w-1/2 pr-4">
-        <h1 className="text-3xl font-bold mb-6">Generate Bill</h1>
-        <form className="space-y-4">
-          <div>
-            <Label htmlFor="customerName">Customer Name</Label>
-            <Input
-              id="customerName"
-              name="customerName"
-              value={formData.customerName}
-              onChange={handleInputChange}
-            />
-          </div>
+    <div className="w-1/2 pr-4">
+     <Link href={'/'}>
+     <ArrowBigLeftDash/>
+     </Link>
+      <h1 className="text-3xl font-bold mb-6">Generate Bill</h1>
+      <form className="space-y-4">
+        <div>
+          <Label htmlFor="customerName">Customer Name</Label>
+          <Input
+            id="customerName"
+            name="customerName"
+            value={formData.customerName}
+            onChange={handleInputChange}
+          />
+        </div>
+        
+        <div className="grid grid-cols-3 gap-4">
           <div>
             <Label htmlFor="amount">Amount</Label>
             <Input
@@ -325,6 +396,9 @@ export default function GenerateBill({ params }) {
               disabled
             />
           </div>
+        </div>
+        
+        <div className="grid grid-cols-3 gap-4">
           <div>
             <Label htmlFor="date">Date</Label>
             <Input
@@ -353,16 +427,20 @@ export default function GenerateBill({ params }) {
               disabled
             />
           </div>
-          <div>
-            <Label htmlFor="invoiceNumber">Invoice Number</Label>
-            <Input
-              id="invoiceNumber"
-              name="invoiceNumber"
-              type="text"
-              value={formData.invoiceNumber}
-              onChange={handleInputChange}
-            />
-          </div>
+        </div>
+
+        {/* <div>
+          <Label htmlFor="invoiceNumber">Invoice Number</Label>
+          <Input
+            id="invoiceNumber"
+            name="invoiceNumber"
+            type="text"
+            value={formData.invoiceNumber}
+            onChange={handleInputChange}
+          />
+        </div> */}
+        
+        <div className="grid grid-cols-2 gap-4">
           <div>
             <Label htmlFor="startTime">Start Time</Label>
             <Input
@@ -383,6 +461,9 @@ export default function GenerateBill({ params }) {
               onChange={handleInputChange}
             />
           </div>
+        </div>
+        
+        <div className="grid grid-cols-2 gap-4">
           <div>
             <Label htmlFor="duration">Duration</Label>
             <Input
@@ -401,66 +482,197 @@ export default function GenerateBill({ params }) {
               disabled
             />
           </div>
-          <div>
-            <Label htmlFor="riderName">Rider Name</Label>
-            <div className="flex space-x-2">
-              <Input
-                id="riderName"
-                name="riderName"
-                value={formData.riderName}
-                onChange={handleInputChange}
-                placeholder="Enter rider name"
-              />
-              <Button 
-                type="button" 
-                onClick={generateRandomRiderName}
-                className="whitespace-nowrap"
-              >
-                Generate Name
-              </Button>
-            </div>
-          </div>
-          <div>
-            <Label htmlFor="numberPlate">Number Plate</Label>
-            <div className="flex space-x-2">
-              <Input
-                id="numberPlate"
-                name="numberPlate"
-                value={formData.numberPlate}
-                onChange={handleInputChange}
-                placeholder="Enter number plate"
-              />
-              <Button 
-                type="button" 
-                onClick={generateRandomNumberPlate}
-                className="whitespace-nowrap"
-              >
-                Generate Plate
-              </Button>
-            </div>
-          </div>
-          <div className="flex space-x-2">
-            <Button type="button" onClick={generatePDF}>Generate PDF</Button>
-            <Button type="button" onClick={handlePrintPreview}>Print Preview</Button>
-          </div>
-        </form>
-      </div>
-      <div className="w-1/2
-pl-4 border-l">
-        <h2 className="text-2xl font-bold mb-4">Preview</h2>
-        <div 
-          ref={previewRef}
-          className="bg-white p-4 border rounded-md overflow-auto" 
-          style={{ width: '210mm', height: '297mm', maxHeight: '600px' }}
-        >
-          <div 
-            dangerouslySetInnerHTML={{ 
-              __html: template.replace(/{{(\w+)}}/g, (_, key) => formData[key] || `{{${key}}}`) 
-            }} 
-          />
         </div>
+
+        <div>
+          <Label htmlFor="riderName">Rider Name</Label>
+          <div className="flex space-x-2">
+            <Input
+              id="riderName"
+              name="riderName"
+              value={formData.riderName}
+              onChange={handleInputChange}
+              placeholder="Enter rider name"
+            />
+            <Button 
+              type="button" 
+              onClick={generateRandomRiderName}
+              className="whitespace-nowrap"
+            >
+              Generate Name
+            </Button>
+          </div>
+        </div>
+
+        <div>
+          <Label htmlFor="numberPlate">Number Plate</Label>
+          <div className="flex space-x-2">
+            <Input
+              id="numberPlate"
+              name="numberPlate"
+              value={formData.numberPlate}
+              onChange={handleInputChange}
+              placeholder="Enter number plate"
+            />
+            <Button 
+              type="button" 
+              onClick={generateRandomNumberPlate}
+              className="whitespace-nowrap"
+            >
+              Generate Plate
+            </Button>
+          </div>
+        </div>
+
+        <div>
+          <Label htmlFor="pickupAddress">Pickup Address</Label>
+          <div className="relative flex space-x-2">
+            <div className="flex-grow relative">
+              <Input
+                id="pickupAddress"
+                name="pickupAddress"
+                value={currentAddress.pickup}
+                onChange={(e) => setCurrentAddress(prev => ({
+                  ...prev, 
+                  pickup: e.target.value
+                }))}
+                placeholder="Enter pickup address"
+                className="pr-10"
+              />
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="absolute right-0 top-1/2 -translate-y-1/2 h-8 w-8"
+                  >
+                    <List className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {addresses.pickup.map((address, index) => (
+                    <div key={index} className="flex items-center justify-between pr-2">
+                      <DropdownMenuItem 
+                        onSelect={() => selectSavedAddress('pickup', address)}
+                        className="flex-grow"
+                      >
+                        {address}
+                      </DropdownMenuItem>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-8 w-8"
+                        onClick={() => {
+                          const updatedAddresses = addresses.pickup.filter(a => a !== address)
+                          setAddresses(prev => ({
+                            ...prev,
+                            pickup: updatedAddresses
+                          }))
+                          localStorage.setItem('pickupAddresses', JSON.stringify(updatedAddresses))
+                        }}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+            <Button 
+              type="button" 
+              onClick={() => saveAddress('pickup')}
+              variant="outline"
+            >
+              Save
+            </Button>
+          </div>
+        </div>
+
+        <div>
+          <Label htmlFor="dropToAddress">Drop-to Address</Label>
+          <div className="relative flex space-x-2">
+            <div className="flex-grow relative">
+              <Input
+                id="dropToAddress"
+                name="dropToAddress"
+                value={currentAddress.dropTo}
+                onChange={(e) => setCurrentAddress(prev => ({
+                  ...prev, 
+                  dropTo: e.target.value
+                }))}
+                placeholder="Enter drop-to address"
+                className="pr-10"
+              />
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="absolute right-0 top-1/2 -translate-y-1/2 h-8 w-8"
+                  >
+                    <List className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {addresses.dropTo.map((address, index) => (
+                    <div key={index} className="flex items-center justify-between pr-2">
+                      <DropdownMenuItem 
+                        onSelect={() => selectSavedAddress('dropTo', address)}
+                        className="flex-grow"
+                      >
+                        {address}
+                      </DropdownMenuItem>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-8 w-8"
+                        onClick={() => {
+                          const updatedAddresses = addresses.dropTo.filter(a => a !== address)
+                          setAddresses(prev => ({
+                            ...prev,
+                            dropTo: updatedAddresses
+                          }))
+                          localStorage.setItem('dropToAddresses', JSON.stringify(updatedAddresses))
+                        }}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+            <Button 
+              type="button" 
+              onClick={() => saveAddress('dropTo')}
+              variant="outline"
+            >
+              Save
+            </Button>
+          </div>
+        </div>
+
+        <div className="flex space-x-2">
+          <Button type="button" onClick={generatePDF}>Generate PDF</Button>
+          <Button type="button" onClick={handlePrintPreview}>Print Preview</Button>
+        </div>
+      </form>
+    </div>
+    <div className="w-1/2 pl-4 border-l">
+      <h2 className="text-2xl font-bold mb-4">Preview</h2>
+      <div 
+        ref={previewRef}
+        className="bg-white p-4 border rounded-md overflow-auto" 
+        style={{ width: '210mm', height: '297mm', maxHeight: '600px' }}
+      >
+        <div 
+          dangerouslySetInnerHTML={{ 
+            __html: template.replace(/{{(\w+)}}/g, (_, key) => formData[key] || `{{${key}}}`) 
+          }} 
+        />
       </div>
     </div>
+  </div>
   )
 }
 
