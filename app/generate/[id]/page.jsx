@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { MapPin, List ,X ,ArrowBigLeftDash} from 'lucide-react'
 import Link from 'next/link'
+import UberReceiptTemplate from '@/app/templates/html/UberReceiptTemplate'
 
 // Configure faker to use Indian locale
 const fakers = new Faker({
@@ -659,6 +660,16 @@ export default function GenerateBill({ params }) {
       </form>
     </div>
     <div className="w-1/2 pl-4 border-l">
+  <h2 className="text-2xl font-bold mb-4">Preview</h2>
+  <div 
+    ref={previewRef}
+    className="border p-4 overflow-auto"
+    style={{ maxHeight: '80vh' }}
+  >
+    <UberReceiptTemplate formData={formData} />
+  </div>
+</div>
+    {/* <div className="w-1/2 pl-4 border-l">
       <h2 className="text-2xl font-bold mb-4">Preview</h2>
       <div 
         ref={previewRef}
@@ -671,7 +682,7 @@ export default function GenerateBill({ params }) {
           }} 
         />
       </div>
-    </div>
+    </div> */}
   </div>
   )
 }
