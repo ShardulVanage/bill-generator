@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { jsPDF } from 'jspdf'
 import html2canvas from 'html2canvas'
+import html2pdf from 'html2pdf.js'
 import React from 'react'
 import { Faker, en_IN } from '@faker-js/faker'
 import { 
@@ -228,41 +229,26 @@ export default function GenerateBill({ params }) {
         return
       }
 
-      const tempContainer = document.createElement('div')
-      tempContainer.style.width = '210mm'
-      tempContainer.style.background = 'white'
-      tempContainer.style.position = 'absolute'
-      tempContainer.style.left = '-9999px'
-      tempContainer.innerHTML = element.innerHTML
-      document.body.appendChild(tempContainer)
+      const opt = {
+        margin:       [0, 0, 0, 0],
+        filename:     'bill.pdf',
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { 
+          scale: 2, 
+          useCORS: true,
+          logging: false,
+          allowTaint: true,
+          backgroundColor: '#ffffff'
+        },
+        jsPDF:        { 
+          unit: 'mm', 
+          format: 'a4', 
+          orientation: 'portrait' 
+        }
+      };
 
-      const canvas = await html2canvas(tempContainer, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        allowTaint: true,
-        backgroundColor: '#ffffff'
-      })
-
-      document.body.removeChild(tempContainer)
-
-      const imgData = canvas.toDataURL('image/jpeg', 1.0)
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4'
-      })
-
-      const pdfWidth = pdf.internal.pageSize.getWidth()
-      const pdfHeight = pdf.internal.pageSize.getHeight()
-      const imgWidth = canvas.width
-      const imgHeight = canvas.height
-      const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight)
-      const imgX = (pdfWidth - imgWidth * ratio) / 2
-      const imgY = 0
-
-      pdf.addImage(imgData, 'JPEG', imgX, imgY, imgWidth * ratio, imgHeight * ratio)
-      pdf.save('bill.pdf')
+      // Generate PDF
+      html2pdf().set(opt).from(element).save()
 
     } catch (error) {
       console.error('Error generating PDF:', error)
@@ -659,7 +645,7 @@ export default function GenerateBill({ params }) {
         </div>
       </form>
     </div>
-    <div className="w-1/2 pl-4 border-l">
+    {/* <div className="w-1/2 pl-4 border-l">
   <h2 className="text-2xl font-bold mb-4">Preview</h2>
   <div 
     ref={previewRef}
@@ -668,8 +654,8 @@ export default function GenerateBill({ params }) {
   >
     <UberReceiptTemplate formData={formData} />
   </div>
-</div>
-    {/* <div className="w-1/2 pl-4 border-l">
+</div> */}
+    <div className="w-1/2 pl-4 border-l">
       <h2 className="text-2xl font-bold mb-4">Preview</h2>
       <div 
         ref={previewRef}
@@ -682,7 +668,7 @@ export default function GenerateBill({ params }) {
           }} 
         />
       </div>
-    </div> */}
+    </div>
   </div>
   )
 }
