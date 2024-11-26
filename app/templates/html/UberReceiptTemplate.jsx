@@ -11,7 +11,7 @@ const UberReceiptTemplate = ({ formData }) => {
         <hr className="mt-3  bg-black "/>
         
         <div className="mt-3">
-            <h1 className="text-xl font-medium text-gray-950 scale-y-90">Here's your receipt for your ride, {formData.customerName}</h1>
+            <h1 className="text-xl font-medium text-gray-950 scale-y-90">Here&apos;s your receipt for your ride, {formData.customerName}</h1>
         </div>
         <div>
             <p className="mt-4 text-gray-700 text-xs scale-y-95">We hope you enjoyed your ride this morning</p>
