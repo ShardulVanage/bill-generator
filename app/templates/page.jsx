@@ -44,7 +44,7 @@ export default async function TemplatesPage() {
                   <Button className="mr-2">Generate Bill</Button>
                 </Link>
                 <form action={deleteTemplate.bind(null, template)}>
-                  <Button type="submit" variant="destructive">Delete</Button>
+                  <Button type="submit" variant="destructive" disabled >Delete</Button>
                 </form>
               </CardContent>
             </Card>

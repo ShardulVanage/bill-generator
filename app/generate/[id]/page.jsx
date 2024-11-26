@@ -663,6 +663,7 @@ export default function GenerateBill({ params }) {
       <div 
         ref={previewRef}
         className="bg-white p-4 border rounded-md  " 
+        // style={{ width: '210mm', height: '297mm', maxHeight: '700px' }}
       >
         <div 
           dangerouslySetInnerHTML={{ 
