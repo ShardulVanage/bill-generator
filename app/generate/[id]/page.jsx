@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { jsPDF } from 'jspdf'
 import html2canvas from 'html2canvas'
-import html2pdf from 'html2pdf.js'
 import React from 'react'
 import { Faker, en_IN } from '@faker-js/faker'
 import { 
@@ -220,39 +219,41 @@ export default function GenerateBill({ params }) {
     }
   }
 
-  const generatePDF = async () => {
-    try {
-      const element = previewRef.current
-      
-      if (!element) {
-        console.error('Preview element not found')
-        return
-      }
+  const generatePDF = () => {
+    const pdf = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4'
+    })
 
-      const opt = {
-        margin:       [0, 0, 0, 0],
-        filename:     'bill.pdf',
-        image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { 
-          scale: 2, 
-          useCORS: true,
-          logging: false,
-          allowTaint: true,
-          backgroundColor: '#ffffff'
-        },
-        jsPDF:        { 
-          unit: 'mm', 
-          format: 'a4', 
-          orientation: 'portrait' 
-        }
-      };
+    // Create a temporary container for the JSX template
+    const tempContainer = document.createElement('div')
+    tempContainer.style.width = '210mm'
+    tempContainer.style.height = '297mm'
+    document.body.appendChild(tempContainer)
 
-      // Generate PDF
-      html2pdf().set(opt).from(element).save()
+    // Render the JSX template to the temporary container
+    const ReactDOMServer = require('react-dom/server')
+    const templateHtml = ReactDOMServer.renderToString(<UberReceiptTemplate formData={formData} />)
+    tempContainer.innerHTML = templateHtml
 
-    } catch (error) {
-      console.error('Error generating PDF:', error)
-    }
+    // Use html2canvas to capture the rendered template
+    import('html2canvas').then((html2canvas) => {
+      html2canvas.default(tempContainer, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        allowTaint: true,
+        backgroundColor: '#ffffff'
+      }).then((canvas) => {
+        const imgData = canvas.toDataURL('image/jpeg', 1.0)
+        pdf.addImage(imgData, 'JPEG', 0, 0, 210, 297)
+        pdf.save('ride_bill.pdf')
+
+        // Remove the temporary container
+        document.body.removeChild(tempContainer)
+      })
+    })
   }
 
   const handlePrintPreview = () => {
@@ -645,28 +646,13 @@ export default function GenerateBill({ params }) {
         </div>
       </form>
     </div>
-    {/* <div className="w-1/2 pl-4 border-l">
-  <h2 className="text-2xl font-bold mb-4">Preview</h2>
-  <div 
-    ref={previewRef}
-    className="border p-4 overflow-auto"
-    style={{ maxHeight: '80vh' }}
-  >
-    <UberReceiptTemplate formData={formData} />
-  </div>
-</div> */}
     <div className="w-1/2 pl-4 border-l">
       <h2 className="text-2xl font-bold mb-4">Preview</h2>
-      <div 
-        ref={previewRef}
-        className="bg-white p-4 border rounded-md  " 
-        // style={{ width: '210mm', height: '297mm', maxHeight: '700px' }}
-      >
-        <div 
-          dangerouslySetInnerHTML={{ 
-            __html: template.replace(/{{(\w+)}}/g, (_, key) => formData[key] || `{{${key}}}`) 
-          }} 
-        />
+      <div className="w-1/2 pl-4 border-l">
+        <h2 className="text-2xl font-bold mb-4">Preview</h2>
+        <div className="bg-white p-4 border rounded-md" style={{ width: '210mm', height: '297mm' }}>
+          <UberReceiptTemplate formData={formData} />
+        </div>
       </div>
     </div>
   </div>
